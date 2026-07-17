@@ -2,7 +2,6 @@ import { lazy, Suspense, type ComponentType, type ReactElement } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { ProtectedRoute } from '../features/auth/protected-route';
 import { AppLayout } from '../layouts/app-layout';
-import { PlaceholderPage } from './placeholder-page';
 import { RouteFallback } from './route-fallback';
 
 const LoginPage = lazy(() =>
@@ -15,6 +14,14 @@ const ServerManagementPage = lazy(() =>
   import('../features/servers/server-management-page').then((module) => ({
     default: module.ServerManagementPage
   }))
+);
+const ConnectionsPage = lazy(() =>
+  import('../features/connections/connections-page').then((module) => ({
+    default: module.ConnectionsPage
+  }))
+);
+const InnoDbPage = lazy(() =>
+  import('../features/innodb/innodb-page').then((module) => ({ default: module.InnoDbPage }))
 );
 const QueryPerformancePage = lazy(() =>
   import('../features/queries/query-performance-page').then((module) => ({
@@ -45,6 +52,15 @@ const CollectorHealthPage = lazy(() =>
     default: module.CollectorHealthPage
   }))
 );
+const UsersPage = lazy(() =>
+  import('../features/admin/users-page').then((module) => ({ default: module.UsersPage }))
+);
+const AuditPage = lazy(() =>
+  import('../features/admin/audit-page').then((module) => ({ default: module.AuditPage }))
+);
+const SettingsPage = lazy(() =>
+  import('../features/admin/settings-page').then((module) => ({ default: module.SettingsPage }))
+);
 
 export const router = createBrowserRouter([
   {
@@ -60,18 +76,18 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: page(OverviewPage) },
           { path: 'servers', element: page(ServerManagementPage) },
-          { path: 'connections', element: <PlaceholderPage title="Connections" /> },
+          { path: 'connections', element: page(ConnectionsPage) },
           { path: 'queries', element: page(QueryPerformancePage) },
           { path: 'running-queries', element: page(RunningQueriesPage) },
-          { path: 'innodb', element: <PlaceholderPage title="InnoDB" /> },
+          { path: 'innodb', element: page(InnoDbPage) },
           { path: 'storage', element: page(StoragePage) },
           { path: 'replication', element: page(ReplicationPage) },
           { path: 'alerts', element: page(AlertsPage) },
           { path: 'alert-rules', element: page(AlertRulesPage) },
           { path: 'collector', element: page(CollectorHealthPage) },
-          { path: 'users', element: <PlaceholderPage title="Users And Roles" /> },
-          { path: 'audit', element: <PlaceholderPage title="Audit Logs" /> },
-          { path: 'settings', element: <PlaceholderPage title="Settings" /> }
+          { path: 'users', element: page(UsersPage) },
+          { path: 'audit', element: page(AuditPage) },
+          { path: 'settings', element: page(SettingsPage) }
         ]
       }
     ]

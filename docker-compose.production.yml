@@ -1,0 +1,94 @@
+services:
+  app-db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${APP_DB_NAME:-mysql_monitor}
+      MYSQL_USER: ${APP_DB_USER:-monitor_app}
+      MYSQL_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${APP_DB_ROOT_PASSWORD:?APP_DB_ROOT_PASSWORD is required}
+    volumes:
+      - app-db-data:/var/lib/mysql
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -uroot -p"$${MYSQL_ROOT_PASSWORD}" --silent']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      APP_DATABASE_URL: mysql://${APP_DB_USER:-monitor_app}:${APP_DB_PASSWORD}@app-db:3306/${APP_DB_NAME:-mysql_monitor}
+      API_PORT: 4000
+    ports:
+      - '${API_HOST:-127.0.0.1}:${API_HOST_PORT:-4400}:4000'
+    depends_on:
+      app-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:4000/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  collector:
+    build:
+      context: .
+      dockerfile: apps/collector/Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      APP_DATABASE_URL: mysql://${APP_DB_USER:-monitor_app}:${APP_DB_PASSWORD}@app-db:3306/${APP_DB_NAME:-mysql_monitor}
+      COLLECTOR_HEALTH_PORT: 4100
+    ports:
+      - '${COLLECTOR_HOST:-127.0.0.1}:${COLLECTOR_HOST_PORT:-4410}:4100'
+    depends_on:
+      app-db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:4100/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_API_BASE_URL:?PUBLIC_API_BASE_URL is required}
+    restart: unless-stopped
+    ports:
+      - '${WEB_HOST:-127.0.0.1}:${WEB_HOST_PORT:-8085}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1/health >/dev/null 2>&1']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  app-db-data:

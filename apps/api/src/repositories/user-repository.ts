@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { ApplicationPool } from '@mysql-monitor/database';
-import type { RoleName } from '@mysql-monitor/types';
+import type { RoleName, UserSummary } from '@mysql-monitor/types';
 import { binToUuid, uuidToBin } from '../utils/ids.js';
 
 interface UserRow extends RowDataPacket {
@@ -9,6 +9,10 @@ interface UserRow extends RowDataPacket {
   display_name: string;
   password_hash: string;
   disabled: 0 | 1;
+  failed_login_count: number;
+  last_login_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 interface RoleRow extends RowDataPacket {
@@ -26,6 +30,34 @@ export interface AuthUserRecord {
 
 export class UserRepository {
   constructor(private readonly pool: ApplicationPool) {}
+
+  async list(): Promise<UserSummary[]> {
+    const [rows] = await this.pool.execute<UserRow[]>(
+      `SELECT id, email, display_name, password_hash, disabled, failed_login_count,
+              last_login_at, created_at, updated_at
+       FROM users
+       ORDER BY created_at DESC
+       LIMIT 200`
+    );
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const id = binToUuid(row.id);
+
+        return {
+          id,
+          email: row.email,
+          displayName: row.display_name,
+          disabled: row.disabled === 1,
+          roles: await this.findRolesForUser(id),
+          failedLoginCount: row.failed_login_count,
+          lastLoginAt: row.last_login_at?.toISOString() ?? null,
+          createdAt: row.created_at.toISOString(),
+          updatedAt: row.updated_at.toISOString()
+        };
+      })
+    );
+  }
 
   async findByEmail(email: string): Promise<AuthUserRecord | null> {
     const [rows] = await this.pool.execute<UserRow[]>(

@@ -14,12 +14,13 @@ import {
   Shield,
   Users
 } from 'lucide-react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { apiClient } from '../services/api-client';
 import { queryKeys } from '../services/query-keys';
-import { useAuth } from '../features/auth/auth-provider';
+import { useAuth } from '../features/auth/auth-context';
 
 const navItems = [
   { to: '/', label: 'Overview', icon: Gauge },
@@ -51,6 +52,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const auth = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const serversQuery = useQuery({
     queryKey: queryKeys.servers,
@@ -73,30 +75,39 @@ export function AppLayout() {
           <Database className="mr-3 h-6 w-6 text-brand" aria-hidden="true" />
           <span className="text-base font-semibold">MySQL Monitor</span>
         </div>
-        <nav className="space-y-1 p-3">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                clsx(
-                  'flex items-center gap-3 rounded px-3 py-2 text-sm font-medium',
-                  isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
-                )
-              }
-            >
-              <item.icon className="h-4 w-4" aria-hidden="true" />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+        <NavigationLinks />
       </aside>
+      {mobileNavOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <button
+            className="absolute inset-0 bg-slate-950/40"
+            aria-label="Close navigation"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <aside className="relative h-full w-72 border-r border-slate-200 bg-white shadow-xl">
+            <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
+              <div className="flex items-center">
+                <Database className="mr-3 h-6 w-6 text-brand" aria-hidden="true" />
+                <span className="text-base font-semibold">MySQL Monitor</span>
+              </div>
+              <button
+                className="rounded border border-slate-200 px-2 py-1 text-sm text-slate-700"
+                onClick={() => setMobileNavOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <NavigationLinks onNavigate={() => setMobileNavOpen(false)} />
+          </aside>
+        </div>
+      ) : null}
       <div className="lg:pl-72">
         <header className="sticky top-0 z-10 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:px-6">
           <div className="flex flex-wrap items-center gap-3">
             <button
               className="rounded border border-slate-200 p-2 text-slate-700 lg:hidden"
               aria-label="Open navigation"
+              onClick={() => setMobileNavOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -158,5 +169,28 @@ export function AppLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <nav className="space-y-1 p-3">
+      {navItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-3 rounded px-3 py-2 text-sm font-medium',
+              isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+            )
+          }
+        >
+          <item.icon className="h-4 w-4" aria-hidden="true" />
+          {item.label}
+        </NavLink>
+      ))}
+    </nav>
   );
 }

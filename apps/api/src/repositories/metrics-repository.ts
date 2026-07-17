@@ -3,6 +3,7 @@ import type { ApplicationPool } from '@mysql-monitor/database';
 import type {
   CollectorRunSummary,
   DatabaseSizeSummary,
+  InnoDbSummary,
   QueryDigestSummary,
   ReplicationSummary,
   OverviewSummary,
@@ -93,6 +94,15 @@ interface ReplicationRow extends RowDataPacket {
   sql_thread_running: 0 | 1 | null;
   lag_seconds: number | string | null;
   collected_at: Date;
+}
+
+interface InnoDbRow extends RowDataPacket {
+  collected_at: Date;
+  buffer_pool_pages_total: number | string | null;
+  buffer_pool_pages_dirty: number | string | null;
+  buffer_pool_read_requests: number | string | null;
+  buffer_pool_reads: number | string | null;
+  buffer_pool_hit_ratio: number | string | null;
 }
 
 export interface MetricRange {
@@ -331,6 +341,39 @@ export class MetricsRepository {
           collectedAt: row.collected_at.toISOString()
         }
       : null;
+  }
+
+  async getInnoDb(serverId: string): Promise<InnoDbSummary | null> {
+    const [rows] = await this.pool.execute<InnoDbRow[]>(
+      `SELECT collected_at, buffer_pool_pages_total, buffer_pool_pages_dirty,
+              buffer_pool_read_requests, buffer_pool_reads, buffer_pool_hit_ratio
+       FROM innodb_snapshots
+       WHERE server_id = ?
+       ORDER BY collected_at DESC
+       LIMIT 1`,
+      [uuidToBin(serverId)]
+    );
+    const row = rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    const dirtyPages = toNumber(row.buffer_pool_pages_dirty);
+    const totalPages = toNumber(row.buffer_pool_pages_total);
+
+    return {
+      collectedAt: row.collected_at.toISOString(),
+      bufferPoolPagesTotal: totalPages,
+      bufferPoolPagesDirty: dirtyPages,
+      bufferPoolReadRequests: toNumber(row.buffer_pool_read_requests),
+      bufferPoolReads: toNumber(row.buffer_pool_reads),
+      bufferPoolHitRatio: toNumber(row.buffer_pool_hit_ratio),
+      dirtyPagePercentage:
+        dirtyPages !== null && totalPages !== null && totalPages > 0
+          ? (dirtyPages / totalPages) * 100
+          : null
+    };
   }
 }
 

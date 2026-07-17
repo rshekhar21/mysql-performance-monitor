@@ -3,10 +3,11 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@mysql-monitor/types';
-import { AuthProvider, useAuth } from '../auth-provider';
+import { useAuth } from '../auth-context';
+import { AuthProvider } from '../auth-provider';
 import { ProtectedRoute } from '../protected-route';
 import { ApiClientError, apiClient } from '../../../services/api-client';
 

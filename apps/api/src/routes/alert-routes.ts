@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { alertRuleCreateSchema } from '@mysql-monitor/validation';
+import { alertRuleCreateSchema, alertRuleUpdateSchema } from '@mysql-monitor/validation';
 import { AlertController } from '../controllers/alert-controller.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
@@ -33,3 +33,14 @@ alertRuleRoutes.post(
     void controller.createRule(req, res).catch(next);
   }
 );
+alertRuleRoutes.patch(
+  '/:ruleId',
+  requirePermission('alerts:manage'),
+  validateBody(alertRuleUpdateSchema),
+  (req, res, next) => {
+    void controller.updateRule(req, res).catch(next);
+  }
+);
+alertRuleRoutes.delete('/:ruleId', requirePermission('alerts:manage'), (req, res, next) => {
+  void controller.deleteRule(req, res).catch(next);
+});

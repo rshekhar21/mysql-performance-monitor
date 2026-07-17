@@ -4,6 +4,7 @@ import { AuditLogRepository } from '../repositories/audit-log-repository.js';
 import { AlertRepository } from '../repositories/alert-repository.js';
 import { MetricsRepository } from '../repositories/metrics-repository.js';
 import { MonitoredServerRepository } from '../repositories/monitored-server-repository.js';
+import { SettingsRepository } from '../repositories/settings-repository.js';
 import { UserRepository } from '../repositories/user-repository.js';
 import { AlertService } from './alert-service.js';
 import { AuthService } from './auth-service.js';
@@ -16,6 +17,7 @@ export const monitoredServerRepository = new MonitoredServerRepository(applicati
 export const metricsRepository = new MetricsRepository(applicationPool);
 export const alertRepository = new AlertRepository(applicationPool);
 export const auditLogRepository = new AuditLogRepository(applicationPool);
+export const settingsRepository = new SettingsRepository(applicationPool);
 
 export const authService = new AuthService(userRepository, apiConfig.JWT_SECRET);
 export const monitoredServerService = new MonitoredServerService(monitoredServerRepository);

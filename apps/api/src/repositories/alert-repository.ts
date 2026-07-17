@@ -1,6 +1,7 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import type { ApplicationPool } from '@mysql-monitor/database';
 import type { AlertEventSummary, AlertRuleSummary, AlertSeverity } from '@mysql-monitor/types';
+import type { AlertRuleUpdateInput } from '@mysql-monitor/validation';
 import { binToUuid, newId, uuidToBin } from '../utils/ids.js';
 
 interface AlertRuleRow extends RowDataPacket {
@@ -89,6 +90,70 @@ export class AlertRepository {
 
     const rules = await this.listRules();
     return rules.find((rule) => rule.id === id) ?? rules[0]!;
+  }
+
+  async updateRule(id: string, input: AlertRuleUpdateInput): Promise<AlertRuleSummary | null> {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    const fieldMap = {
+      name: 'name',
+      metricKey: 'metric_key',
+      enabled: 'enabled',
+      warningThreshold: 'warning_threshold',
+      criticalThreshold: 'critical_threshold',
+      evaluationWindowSeconds: 'evaluation_window_seconds',
+      minimumConsecutiveFailures: 'minimum_consecutive_failures',
+      cooldownSeconds: 'cooldown_seconds',
+      autoResolve: 'auto_resolve',
+      description: 'description',
+      remediation: 'remediation'
+    } as const;
+
+    if ('serverId' in input) {
+      fields.push('server_id = ?');
+      values.push(input.serverId ? uuidToBin(input.serverId) : null);
+    }
+
+    for (const [key, column] of Object.entries(fieldMap)) {
+      const value = input[key as keyof typeof fieldMap];
+
+      if (value !== undefined) {
+        fields.push(`${column} = ?`);
+        values.push(value);
+      }
+    }
+
+    if (fields.length > 0) {
+      await this.pool.query(`UPDATE alert_rules SET ${fields.join(', ')} WHERE id = ?`, [
+        ...values,
+        uuidToBin(id)
+      ]);
+    }
+
+    return this.findRule(id);
+  }
+
+  async deleteRule(id: string): Promise<boolean> {
+    const [result] = await this.pool.execute<ResultSetHeader>(
+      `DELETE FROM alert_rules WHERE id = ?`,
+      [uuidToBin(id)]
+    );
+
+    return result.affectedRows > 0;
+  }
+
+  private async findRule(id: string): Promise<AlertRuleSummary | null> {
+    const [rows] = await this.pool.execute<AlertRuleRow[]>(
+      `SELECT id, server_id, name, metric_key, enabled, warning_threshold, critical_threshold,
+              evaluation_window_seconds, minimum_consecutive_failures, cooldown_seconds,
+              auto_resolve, description, remediation, created_at, updated_at
+       FROM alert_rules
+       WHERE id = ?
+       LIMIT 1`,
+      [uuidToBin(id)]
+    );
+
+    return rows[0] ? mapRule(rows[0]) : null;
   }
 
   async listEvents(): Promise<AlertEventSummary[]> {

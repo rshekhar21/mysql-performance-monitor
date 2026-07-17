@@ -65,6 +65,11 @@ export class MetricsService {
     return this.metrics.getReplication(serverId);
   }
 
+  async innoDb(serverId: string) {
+    await this.ensureServer(serverId);
+    return this.metrics.getInnoDb(serverId);
+  }
+
   private async ensureServer(serverId: string): Promise<void> {
     const server = await this.servers.findById(serverId);
 

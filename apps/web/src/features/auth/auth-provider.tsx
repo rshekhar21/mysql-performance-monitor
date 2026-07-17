@@ -1,18 +1,8 @@
 import type { User } from '@mysql-monitor/types';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { AuthContext, type AuthStatus } from './auth-context';
 import { ApiClientError, apiClient, authTokenStorage } from '../../services/api-client';
-
-type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
-
-interface AuthContextValue {
-  status: AuthStatus;
-  user: User | null;
-  login: (token: string, user: User) => void;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
@@ -95,14 +85,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextValue {
-  const value = useContext(AuthContext);
-
-  if (!value) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-
-  return value;
 }

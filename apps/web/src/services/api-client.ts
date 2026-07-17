@@ -1,9 +1,12 @@
 import type {
   ApiResponse,
+  AppSettingSummary,
+  AuditLogSummary,
   AlertEventSummary,
   AlertRuleSummary,
   CollectorRunSummary,
   DatabaseSizeSummary,
+  InnoDbSummary,
   MonitoredServer,
   OverviewSummary,
   QueryDigestSummary,
@@ -11,13 +14,27 @@ import type {
   RunningQuerySummary,
   TableSizeSummary,
   TimeSeriesPoint,
-  User
+  User,
+  UserSummary
 } from '@mysql-monitor/types';
+import type {
+  MonitoredServerCreateInput,
+  MonitoredServerUpdateInput,
+  AlertRuleUpdateInput
+} from '@mysql-monitor/validation';
 
-const viteEnv = import.meta.env as unknown as { VITE_API_BASE_URL?: string };
+const viteEnv = import.meta.env as unknown as { PROD?: boolean; VITE_API_BASE_URL?: string };
 const configuredBaseUrl = viteEnv.VITE_API_BASE_URL ?? '';
-const baseUrl = configuredBaseUrl.length > 0 ? configuredBaseUrl : 'http://localhost:4000';
+const baseUrl = configuredBaseUrl.length > 0 ? configuredBaseUrl : developmentBaseUrl();
 const authTokenKey = 'authToken';
+
+function developmentBaseUrl(): string {
+  if (viteEnv.PROD) {
+    throw new Error('VITE_API_BASE_URL is required for production builds');
+  }
+
+  return 'http://localhost:4000';
+}
 
 export class ApiClientError extends Error {
   constructor(
@@ -70,6 +87,25 @@ export const apiClient = {
   logout: () => request<{ ok: true }>('/api/v1/auth/logout', { method: 'POST' }),
   me: () => request<{ user: User }>('/api/v1/auth/me'),
   servers: () => request<{ servers: MonitoredServer[] }>('/api/v1/servers'),
+  createServer: (input: MonitoredServerCreateInput) =>
+    request<{ server: MonitoredServer }>('/api/v1/servers', {
+      method: 'POST',
+      body: JSON.stringify(input)
+    }),
+  updateServer: (serverId: string, input: MonitoredServerUpdateInput) =>
+    request<{ server: MonitoredServer }>(`/api/v1/servers/${serverId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input)
+    }),
+  deleteServer: (serverId: string) =>
+    request<{ ok: true }>(`/api/v1/servers/${serverId}`, { method: 'DELETE' }),
+  testServerConnection: (input: MonitoredServerCreateInput) =>
+    request<{ ok: true }>('/api/v1/servers/test-connection', {
+      method: 'POST',
+      body: JSON.stringify(input)
+    }),
+  testStoredServerConnection: (serverId: string) =>
+    request<{ ok: true }>(`/api/v1/servers/${serverId}/test-connection`, { method: 'POST' }),
   overview: (serverId: string) =>
     request<{ overview: OverviewSummary }>(`/api/v1/servers/${serverId}/overview`),
   metrics: (serverId: string, range: string) =>
@@ -96,8 +132,13 @@ export const apiClient = {
     request<{ queries: RunningQuerySummary[] }>(`/api/v1/servers/${serverId}/running-queries`),
   replication: (serverId: string) =>
     request<{ replication: ReplicationSummary | null }>(`/api/v1/servers/${serverId}/replication`),
+  innoDb: (serverId: string) =>
+    request<{ innodb: InnoDbSummary | null }>(`/api/v1/servers/${serverId}/innodb`),
   alerts: () => request<{ alerts: AlertEventSummary[] }>('/api/v1/alerts'),
   alertRules: () => request<{ rules: AlertRuleSummary[] }>('/api/v1/alert-rules'),
+  users: () => request<{ users: UserSummary[] }>('/api/v1/users'),
+  auditLogs: () => request<{ logs: AuditLogSummary[] }>('/api/v1/audit-logs'),
+  settings: () => request<{ settings: AppSettingSummary[] }>('/api/v1/settings'),
   createAlertRule: (input: {
     name: string;
     metricKey: string;
@@ -109,6 +150,13 @@ export const apiClient = {
       method: 'POST',
       body: JSON.stringify(input)
     }),
+  updateAlertRule: (ruleId: string, input: AlertRuleUpdateInput) =>
+    request<{ rule: AlertRuleSummary }>(`/api/v1/alert-rules/${ruleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input)
+    }),
+  deleteAlertRule: (ruleId: string) =>
+    request<{ ok: true }>(`/api/v1/alert-rules/${ruleId}`, { method: 'DELETE' }),
   acknowledgeAlert: (alertId: string) =>
     request<{ ok: true }>(`/api/v1/alerts/${alertId}/acknowledge`, { method: 'POST' })
 };

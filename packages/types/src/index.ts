@@ -58,6 +58,36 @@ export interface MonitoredServer {
   updatedAt: string;
 }
 
+export interface UserSummary {
+  id: string;
+  email: string;
+  displayName: string;
+  disabled: boolean;
+  roles: RoleName[];
+  lastLoginAt: string | null;
+  failedLoginCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditLogSummary {
+  id: string;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  requestId: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export interface AppSettingSummary {
+  key: string;
+  value: unknown;
+  updatedAt: string;
+}
+
 export interface MetricPoint {
   collectedAt: string;
   metricKey: string;
@@ -83,6 +113,16 @@ export interface OverviewSummary {
 export interface TimeSeriesPoint {
   collectedAt: string;
   [metricKey: string]: string | number | null;
+}
+
+export interface InnoDbSummary {
+  collectedAt: string;
+  bufferPoolPagesTotal: number | null;
+  bufferPoolPagesDirty: number | null;
+  bufferPoolReadRequests: number | null;
+  bufferPoolReads: number | null;
+  bufferPoolHitRatio: number | null;
+  dirtyPagePercentage: number | null;
 }
 
 export interface DatabaseSizeSummary {

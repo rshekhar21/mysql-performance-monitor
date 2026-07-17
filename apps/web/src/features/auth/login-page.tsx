@@ -1,7 +1,7 @@
 import { Database } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from './auth-provider';
+import { useAuth } from './auth-context';
 import { apiClient } from '../../services/api-client';
 
 export function LoginPage() {

@@ -56,9 +56,19 @@ export const alertRuleCreateSchema = z.object({
   remediation: z.string().max(4000).nullable().optional()
 });
 
+export const alertRuleUpdateSchema = alertRuleCreateSchema
+  .extend({
+    enabled: z.boolean().optional()
+  })
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field must be provided'
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type MonitoredServerCreateInput = z.infer<typeof monitoredServerCreateSchema>;
 export type MonitoredServerUpdateInput = z.infer<typeof monitoredServerUpdateSchema>;
 export type MetricQueryInput = z.infer<typeof metricQuerySchema>;
 export type AlertRuleCreateInput = z.infer<typeof alertRuleCreateSchema>;
+export type AlertRuleUpdateInput = z.infer<typeof alertRuleUpdateSchema>;
 export { z };

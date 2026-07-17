@@ -83,6 +83,9 @@ serverRoutes.get(
     void metricsController.replication(req, res).catch(next);
   }
 );
+serverRoutes.get('/:serverId/innodb', requirePermission('dashboard:read'), (req, res, next) => {
+  void metricsController.innoDb(req, res).catch(next);
+});
 serverRoutes.patch(
   '/:serverId',
   requirePermission('servers:manage'),

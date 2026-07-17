@@ -85,6 +85,20 @@ export function AlertRulesPage() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.alertRules });
     }
   });
+  const toggleMutation = useMutation({
+    mutationFn: ({ ruleId, enabled }: { ruleId: string; enabled: boolean }) =>
+      apiClient.updateAlertRule(ruleId, { enabled }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.alertRules });
+    }
+  });
+  const deleteMutation = useMutation({
+    mutationFn: apiClient.deleteAlertRule,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.alertRules });
+    }
+  });
+  const busy = createMutation.isPending || toggleMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -117,7 +131,8 @@ export function AlertRulesPage() {
           onChange={(event) => setCriticalThreshold(event.target.value)}
         />
         <button
-          className="h-10 rounded bg-slate-900 px-3 text-sm font-medium text-white"
+          className="h-10 rounded bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={busy}
           onClick={() =>
             createMutation.mutate({
               name,
@@ -127,7 +142,7 @@ export function AlertRulesPage() {
             })
           }
         >
-          Create Rule
+          {createMutation.isPending ? 'Creating...' : 'Create Rule'}
         </button>
       </div>
       <div className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
@@ -139,18 +154,51 @@ export function AlertRulesPage() {
               <th className="px-4 py-3">Warning</th>
               <th className="px-4 py-3">Critical</th>
               <th className="px-4 py-3">Enabled</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {(rulesQuery.data?.rules ?? []).map((rule) => (
-              <tr key={rule.id}>
-                <td className="px-4 py-3 font-medium">{rule.name}</td>
-                <td className="px-4 py-3 text-muted">{rule.metricKey}</td>
-                <td className="px-4 py-3 text-muted">{rule.warningThreshold ?? '-'}</td>
-                <td className="px-4 py-3 text-muted">{rule.criticalThreshold ?? '-'}</td>
-                <td className="px-4 py-3 text-muted">{rule.enabled ? 'Yes' : 'No'}</td>
+            {(rulesQuery.data?.rules ?? []).length ? (
+              rulesQuery.data?.rules.map((rule) => (
+                <tr key={rule.id}>
+                  <td className="px-4 py-3 font-medium">{rule.name}</td>
+                  <td className="px-4 py-3 text-muted">{rule.metricKey}</td>
+                  <td className="px-4 py-3 text-muted">{rule.warningThreshold ?? '-'}</td>
+                  <td className="px-4 py-3 text-muted">{rule.criticalThreshold ?? '-'}</td>
+                  <td className="px-4 py-3 text-muted">{rule.enabled ? 'Yes' : 'No'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        className="rounded border border-slate-300 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={busy}
+                        onClick={() =>
+                          toggleMutation.mutate({ ruleId: rule.id, enabled: !rule.enabled })
+                        }
+                      >
+                        {rule.enabled ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        className="rounded border border-red-300 px-3 py-1 text-sm text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={busy}
+                        onClick={() => {
+                          if (window.confirm(`Delete alert rule ${rule.name}?`)) {
+                            deleteMutation.mutate(rule.id);
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td className="px-4 py-6 text-muted" colSpan={6}>
+                  {rulesQuery.isLoading ? 'Loading alert rules...' : 'No alert rules configured.'}
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

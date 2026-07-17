@@ -11,3 +11,4 @@ RUN npm run build:packages && npm run build:web
 
 FROM nginx:1.27-alpine
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

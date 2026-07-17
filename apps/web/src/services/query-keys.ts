@@ -10,6 +10,10 @@ export const queryKeys = {
   queryPerformance: (serverId: string) => ['servers', serverId, 'query-performance'] as const,
   runningQueries: (serverId: string) => ['servers', serverId, 'running-queries'] as const,
   replication: (serverId: string) => ['servers', serverId, 'replication'] as const,
+  innoDb: (serverId: string) => ['servers', serverId, 'innodb'] as const,
   alerts: ['alerts'] as const,
-  alertRules: ['alert-rules'] as const
+  alertRules: ['alert-rules'] as const,
+  users: ['users'] as const,
+  auditLogs: ['audit-logs'] as const,
+  settings: ['settings'] as const
 };

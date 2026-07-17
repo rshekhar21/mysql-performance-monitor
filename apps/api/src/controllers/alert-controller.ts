@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { AlertRuleCreateInput } from '@mysql-monitor/validation';
+import type { AlertRuleCreateInput, AlertRuleUpdateInput } from '@mysql-monitor/validation';
 import { AuthenticationError, ValidationError } from '../errors/app-error.js';
 import { sendSuccess } from '../middleware/responses.js';
 import { alertService } from '../services/index.js';
@@ -26,6 +26,16 @@ export class AlertController {
     const body = req.body as AlertRuleCreateInput;
     sendSuccess(res, { rule: await alertService.createRule(body) }, {}, 201);
   }
+
+  async updateRule(req: Request, res: Response): Promise<void> {
+    const body = req.body as AlertRuleUpdateInput;
+    sendSuccess(res, { rule: await alertService.updateRule(getRuleId(req), body) });
+  }
+
+  async deleteRule(req: Request, res: Response): Promise<void> {
+    await alertService.deleteRule(getRuleId(req));
+    sendSuccess(res, { ok: true });
+  }
 }
 
 function getAlertId(req: Request): string {
@@ -36,4 +46,14 @@ function getAlertId(req: Request): string {
   }
 
   return alertId;
+}
+
+function getRuleId(req: Request): string {
+  const ruleId = req.params.ruleId;
+
+  if (typeof ruleId !== 'string') {
+    throw new ValidationError([{ path: ['ruleId'], message: 'ruleId is required' }]);
+  }
+
+  return ruleId;
 }

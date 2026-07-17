@@ -51,6 +51,10 @@ export class MetricsController {
   async replication(req: Request, res: Response): Promise<void> {
     sendSuccess(res, { replication: await metricsService.replication(getServerId(req)) });
   }
+
+  async innoDb(req: Request, res: Response): Promise<void> {
+    sendSuccess(res, { innodb: await metricsService.innoDb(getServerId(req)) });
+  }
 }
 
 function getServerId(req: Request): string {

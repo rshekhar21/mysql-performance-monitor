@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import type { RowDataPacket } from 'mysql2';
 import { createApplicationPool } from './pool.js';
 
 const databaseUrl = process.env.APP_DATABASE_URL;
@@ -21,6 +22,10 @@ const roles = [
 
 const pool = createApplicationPool(databaseUrl);
 
+interface CountRow extends RowDataPacket {
+  count: number;
+}
+
 try {
   for (const [name, description] of roles) {
     await pool.execute(`INSERT IGNORE INTO roles (id, name, description) VALUES (?, ?, ?)`, [
@@ -34,22 +39,34 @@ try {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
 
   if (adminEmail && adminPassword) {
-    const passwordHash = await bcrypt.hash(adminPassword, 12);
-
-    await pool.execute(
-      `INSERT IGNORE INTO users (id, email, display_name, password_hash)
-       VALUES (?, ?, ?, ?)`,
-      [uuidToBin(randomUUID()), adminEmail, 'Initial Administrator', passwordHash]
-    );
-
-    await pool.execute(
-      `INSERT IGNORE INTO user_roles (user_id, role_id)
-       SELECT u.id, r.id
+    const [adminRows] = await pool.execute<CountRow[]>(
+      `SELECT COUNT(*) AS count
        FROM users u
-       INNER JOIN roles r ON r.name = 'super_admin'
-       WHERE u.email = ?`,
-      [adminEmail]
+       INNER JOIN user_roles ur ON ur.user_id = u.id
+       INNER JOIN roles r ON r.id = ur.role_id
+       WHERE r.name = 'super_admin'`
     );
+
+    if ((adminRows[0]?.count ?? 0) > 0) {
+      console.log('Super admin already exists; skipping admin seed');
+    } else {
+      const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+      await pool.execute(
+        `INSERT IGNORE INTO users (id, email, display_name, password_hash)
+         VALUES (?, ?, ?, ?)`,
+        [uuidToBin(randomUUID()), adminEmail, 'Initial Administrator', passwordHash]
+      );
+
+      await pool.execute(
+        `INSERT IGNORE INTO user_roles (user_id, role_id)
+         SELECT u.id, r.id
+         FROM users u
+         INNER JOIN roles r ON r.name = 'super_admin'
+         WHERE u.email = ?`,
+        [adminEmail]
+      );
+    }
   }
 
   console.log('Seed completed');
