@@ -17,9 +17,32 @@ import type {
 const viteEnv = import.meta.env as unknown as { VITE_API_BASE_URL?: string };
 const configuredBaseUrl = viteEnv.VITE_API_BASE_URL ?? '';
 const baseUrl = configuredBaseUrl.length > 0 ? configuredBaseUrl : 'http://localhost:4000';
+const authTokenKey = 'authToken';
+
+export class ApiClientError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string
+  ) {
+    super(message);
+  }
+}
+
+export const authTokenStorage = {
+  get(): string | null {
+    return localStorage.getItem(authTokenKey);
+  },
+  set(token: string): void {
+    localStorage.setItem(authTokenKey, token);
+  },
+  clear(): void {
+    localStorage.removeItem(authTokenKey);
+  }
+};
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('authToken');
+  const token = authTokenStorage.get();
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
@@ -31,7 +54,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const payload = (await response.json()) as ApiResponse<T>;
 
   if (!payload.success) {
-    throw new Error(payload.error.message);
+    throw new ApiClientError(payload.error.message, response.status, payload.error.code);
   }
 
   return payload.data;
@@ -44,6 +67,8 @@ export const apiClient = {
       method: 'POST',
       body: JSON.stringify(input)
     }),
+  logout: () => request<{ ok: true }>('/api/v1/auth/logout', { method: 'POST' }),
+  me: () => request<{ user: User }>('/api/v1/auth/me'),
   servers: () => request<{ servers: MonitoredServer[] }>('/api/v1/servers'),
   overview: (serverId: string) =>
     request<{ overview: OverviewSummary }>(`/api/v1/servers/${serverId}/overview`),

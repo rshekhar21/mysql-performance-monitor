@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType, type ReactElement } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
+import { ProtectedRoute } from '../features/auth/protected-route';
 import { AppLayout } from '../layouts/app-layout';
 import { PlaceholderPage } from './placeholder-page';
 import { RouteFallback } from './route-fallback';
@@ -52,22 +53,27 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: <AppLayout />,
+    element: <ProtectedRoute />,
     children: [
-      { index: true, element: page(OverviewPage) },
-      { path: 'servers', element: page(ServerManagementPage) },
-      { path: 'connections', element: <PlaceholderPage title="Connections" /> },
-      { path: 'queries', element: page(QueryPerformancePage) },
-      { path: 'running-queries', element: page(RunningQueriesPage) },
-      { path: 'innodb', element: <PlaceholderPage title="InnoDB" /> },
-      { path: 'storage', element: page(StoragePage) },
-      { path: 'replication', element: page(ReplicationPage) },
-      { path: 'alerts', element: page(AlertsPage) },
-      { path: 'alert-rules', element: page(AlertRulesPage) },
-      { path: 'collector', element: page(CollectorHealthPage) },
-      { path: 'users', element: <PlaceholderPage title="Users And Roles" /> },
-      { path: 'audit', element: <PlaceholderPage title="Audit Logs" /> },
-      { path: 'settings', element: <PlaceholderPage title="Settings" /> }
+      {
+        element: <AppLayout />,
+        children: [
+          { index: true, element: page(OverviewPage) },
+          { path: 'servers', element: page(ServerManagementPage) },
+          { path: 'connections', element: <PlaceholderPage title="Connections" /> },
+          { path: 'queries', element: page(QueryPerformancePage) },
+          { path: 'running-queries', element: page(RunningQueriesPage) },
+          { path: 'innodb', element: <PlaceholderPage title="InnoDB" /> },
+          { path: 'storage', element: page(StoragePage) },
+          { path: 'replication', element: page(ReplicationPage) },
+          { path: 'alerts', element: page(AlertsPage) },
+          { path: 'alert-rules', element: page(AlertRulesPage) },
+          { path: 'collector', element: page(CollectorHealthPage) },
+          { path: 'users', element: <PlaceholderPage title="Users And Roles" /> },
+          { path: 'audit', element: <PlaceholderPage title="Audit Logs" /> },
+          { path: 'settings', element: <PlaceholderPage title="Settings" /> }
+        ]
+      }
     ]
   }
 ]);

@@ -1,12 +1,14 @@
 import { Database } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from './auth-provider';
 import { apiClient } from '../../services/api-client';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@example.test');
-  const [password, setPassword] = useState('change-this-local-password');
+  const auth = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -16,13 +18,17 @@ export function LoginPage() {
 
     try {
       const result = await apiClient.login({ email, password });
-      localStorage.setItem('authToken', result.token);
+      auth.login(result.token, result.user);
       void navigate('/');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Login failed');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (auth.status === 'authenticated') {
+    return <Navigate to="/" replace />;
   }
 
   return (

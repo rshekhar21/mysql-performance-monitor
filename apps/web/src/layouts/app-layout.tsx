@@ -19,6 +19,7 @@ import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx';
 import { apiClient } from '../services/api-client';
 import { queryKeys } from '../services/query-keys';
+import { useAuth } from '../features/auth/auth-provider';
 
 const navItems = [
   { to: '/', label: 'Overview', icon: Gauge },
@@ -49,6 +50,7 @@ const ranges = [
 export function AppLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const auth = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const serversQuery = useQuery({
     queryKey: queryKeys.servers,
@@ -140,8 +142,10 @@ export function AppLayout() {
             <button
               className="h-10 rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
               onClick={() => {
-                localStorage.removeItem('authToken');
-                void navigate('/login');
+                void auth.logout().then(() => {
+                  queryClient.clear();
+                  void navigate('/login');
+                });
               }}
             >
               Sign Out
