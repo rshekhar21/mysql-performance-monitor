@@ -1,0 +1,63 @@
+{
+  "name": "mysql-performance-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-oriented MySQL monitoring and performance dashboard.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:*",
+    "dev:api": "npm --workspace @mysql-monitor/api run dev",
+    "dev:collector": "npm --workspace @mysql-monitor/collector run dev",
+    "dev:web": "npm --workspace @mysql-monitor/web run dev",
+    "build": "npm-run-all build:packages build:apps",
+    "build:packages": "npm-run-all build:types --parallel build:shared build:config build:validation build:database",
+    "build:apps": "npm-run-all --parallel build:api build:collector build:web",
+    "build:api": "npm --workspace @mysql-monitor/api run build",
+    "build:collector": "npm --workspace @mysql-monitor/collector run build",
+    "build:web": "npm --workspace @mysql-monitor/web run build",
+    "build:shared": "npm --workspace @mysql-monitor/shared run build",
+    "build:config": "npm --workspace @mysql-monitor/config run build",
+    "build:types": "npm --workspace @mysql-monitor/types run build",
+    "build:validation": "npm --workspace @mysql-monitor/validation run build",
+    "build:database": "npm --workspace @mysql-monitor/database run build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm-run-all build:packages --parallel typecheck:api typecheck:collector typecheck:web typecheck:packages",
+    "typecheck:api": "npm --workspace @mysql-monitor/api run typecheck",
+    "typecheck:collector": "npm --workspace @mysql-monitor/collector run typecheck",
+    "typecheck:web": "npm --workspace @mysql-monitor/web run typecheck",
+    "typecheck:packages": "npm-run-all --parallel typecheck:shared typecheck:config typecheck:types typecheck:validation typecheck:database",
+    "typecheck:shared": "npm --workspace @mysql-monitor/shared run typecheck",
+    "typecheck:config": "npm --workspace @mysql-monitor/config run typecheck",
+    "typecheck:types": "npm --workspace @mysql-monitor/types run typecheck",
+    "typecheck:validation": "npm --workspace @mysql-monitor/validation run typecheck",
+    "typecheck:database": "npm --workspace @mysql-monitor/database run typecheck",
+    "test": "vitest run --passWithNoTests",
+    "db:migrate": "npm --workspace @mysql-monitor/database run migrate",
+    "db:seed": "npm --workspace @mysql-monitor/database run seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.7",
+    "@vitejs/plugin-react": "^6.0.3",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}
