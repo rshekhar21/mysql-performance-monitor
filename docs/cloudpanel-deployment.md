@@ -37,6 +37,13 @@ Before running the installer, set:
 
 The installer generates strong values for `APP_DB_PASSWORD`, `APP_DB_ROOT_PASSWORD`, `JWT_SECRET`, and `CREDENTIAL_ENCRYPTION_KEY` if they still contain placeholder values.
 
+The installer is safe to run repeatedly:
+
+- it does not overwrite an existing `.env.production`;
+- it does not delete or recreate the `app-db-data` Docker volume;
+- it skips first-install port checks when this production Compose project is already running;
+- it never binds the application database to host port `3306`.
+
 ## Ports
 
 Production defaults bind only to loopback:

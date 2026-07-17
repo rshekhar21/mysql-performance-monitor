@@ -61,6 +61,20 @@ port_is_free() {
   fi
 }
 
+production_services_running() {
+  local service
+  local container_id
+
+  for service in web api collector; do
+    container_id="$(compose ps -q "$service" 2>/dev/null || true)"
+    if [[ -n "$container_id" ]] && docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null | grep -q true; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 require_file() {
   [[ -f "$1" ]] || fail "Missing required file: $1"
 }
@@ -100,14 +114,18 @@ set +a
 [[ "${PUBLIC_API_BASE_URL:-}" != *localhost* ]] || fail "PUBLIC_API_BASE_URL must not point to localhost in production"
 [[ "${CORS_ORIGIN:-}" != *localhost* ]] || fail "CORS_ORIGIN must not point to localhost in production"
 
-for item in "${WEB_HOST:-127.0.0.1}:${WEB_HOST_PORT:-8085}" "${API_HOST:-127.0.0.1}:${API_HOST_PORT:-4400}" "${COLLECTOR_HOST:-127.0.0.1}:${COLLECTOR_HOST_PORT:-4410}"; do
-  host="${item%:*}"
-  port="${item##*:}"
-  port_is_free "$host" "$port" || fail "Port $host:$port is already in use"
-done
-
 command -v docker >/dev/null 2>&1 || fail "Docker is not installed"
 docker info >/dev/null 2>&1 || fail "Docker daemon is not running or current user cannot access Docker"
+
+if production_services_running; then
+  log "Existing production services are running; skipping first-install port availability checks"
+else
+  for item in "${WEB_HOST:-127.0.0.1}:${WEB_HOST_PORT:-8085}" "${API_HOST:-127.0.0.1}:${API_HOST_PORT:-4400}" "${COLLECTOR_HOST:-127.0.0.1}:${COLLECTOR_HOST_PORT:-4410}"; do
+    host="${item%:*}"
+    port="${item##*:}"
+    port_is_free "$host" "$port" || fail "Port $host:$port is already in use"
+  done
+fi
 
 log "Building production images"
 compose build api collector web
