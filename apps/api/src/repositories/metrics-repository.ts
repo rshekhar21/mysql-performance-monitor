@@ -211,6 +211,7 @@ export class MetricsRepository {
   }
 
   async getTopDatabases(serverId: string, limit: number): Promise<DatabaseSizeSummary[]> {
+    const safeLimit = sqlLimit(limit);
     const [rows] = await this.pool.execute<DatabaseRow[]>(
       `SELECT database_name, data_length_bytes, index_length_bytes, total_bytes, table_count, collected_at
        FROM database_size_snapshots
@@ -219,16 +220,17 @@ export class MetricsRepository {
            SELECT MAX(collected_at)
            FROM database_size_snapshots
            WHERE server_id = ?
-         )
+       )
        ORDER BY total_bytes DESC
-       LIMIT ?`,
-      [uuidToBin(serverId), uuidToBin(serverId), limit]
+       LIMIT ${safeLimit}`,
+      [uuidToBin(serverId), uuidToBin(serverId)]
     );
 
     return rows.map(mapDatabaseRow);
   }
 
   async getTopTables(serverId: string, limit: number): Promise<TableSizeSummary[]> {
+    const safeLimit = sqlLimit(limit);
     const [rows] = await this.pool.execute<TableRow[]>(
       `SELECT database_name, table_name, engine, table_rows, data_length_bytes, index_length_bytes,
               data_free_bytes, total_bytes, collected_at
@@ -238,10 +240,10 @@ export class MetricsRepository {
            SELECT MAX(collected_at)
            FROM table_size_snapshots
            WHERE server_id = ?
-         )
+       )
        ORDER BY total_bytes DESC
-       LIMIT ?`,
-      [uuidToBin(serverId), uuidToBin(serverId), limit]
+       LIMIT ${safeLimit}`,
+      [uuidToBin(serverId), uuidToBin(serverId)]
     );
 
     return rows.map(mapTableRow);
@@ -268,14 +270,15 @@ export class MetricsRepository {
   }
 
   async getCollectorRuns(serverId: string, limit: number): Promise<CollectorRunSummary[]> {
+    const safeLimit = sqlLimit(limit);
     const [rows] = await this.pool.execute<CollectorRunRow[]>(
       `SELECT id, server_id, metric_group, started_at, finished_at, duration_ms, success,
               records_collected, sanitized_error_code
        FROM collector_runs
        WHERE server_id = ?
        ORDER BY started_at DESC
-       LIMIT ?`,
-      [uuidToBin(serverId), limit]
+       LIMIT ${safeLimit}`,
+      [uuidToBin(serverId)]
     );
 
     return rows.map((row) => ({
@@ -292,6 +295,7 @@ export class MetricsRepository {
   }
 
   async getQueryDigests(serverId: string, limit: number): Promise<QueryDigestSummary[]> {
+    const safeLimit = sqlLimit(limit);
     const [rows] = await this.pool.execute<QueryDigestRow[]>(
       `SELECT schema_name, digest, digest_text, count_star, sum_timer_wait, avg_timer_wait,
               max_timer_wait, sum_rows_examined, sum_rows_sent, collected_at
@@ -301,10 +305,10 @@ export class MetricsRepository {
            SELECT MAX(collected_at)
            FROM query_digest_snapshots
            WHERE server_id = ?
-         )
+       )
        ORDER BY sum_timer_wait DESC
-       LIMIT ?`,
-      [uuidToBin(serverId), uuidToBin(serverId), limit]
+       LIMIT ${safeLimit}`,
+      [uuidToBin(serverId), uuidToBin(serverId)]
     );
 
     return rows.map((row) => ({
@@ -409,6 +413,14 @@ function toNumber(value: number | string | null | undefined): number | null {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function sqlLimit(limit: number): number {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 2_000) {
+    throw new Error('Invalid metrics query limit');
+  }
+
+  return limit;
 }
 
 function parseCapabilities(

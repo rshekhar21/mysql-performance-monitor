@@ -7,7 +7,13 @@ export const baseEnvSchema = z.object({
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   APP_DATABASE_URL: z.string().url(),
   CREDENTIAL_ENCRYPTION_KEY: z.string().min(32),
-  JWT_SECRET: z.string().min(32)
+  JWT_SECRET: z.string().min(32),
+  MONITORED_MYSQL_CONNECT_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(120_000)
+    .default(15_000)
 });
 
 export const apiEnvSchema = baseEnvSchema.extend({

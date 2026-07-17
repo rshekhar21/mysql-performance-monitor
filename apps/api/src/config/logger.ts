@@ -4,8 +4,11 @@ import { apiConfig } from './env.js';
 const redactPaths = [
   'req.headers.authorization',
   'req.headers.cookie',
+  'err.body',
   'password',
   '*.password',
+  '*.encryptedPassword',
+  '*.encryptedCredentials',
   '*.token',
   '*.authorization',
   '*.cookie'

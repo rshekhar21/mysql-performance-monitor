@@ -8,7 +8,14 @@ export const logger = pino({
     environment: collectorConfig.NODE_ENV
   },
   redact: {
-    paths: ['*.password', '*.token', '*.authorization', '*.cookie'],
+    paths: [
+      '*.password',
+      '*.encryptedPassword',
+      '*.encryptedCredentials',
+      '*.token',
+      '*.authorization',
+      '*.cookie'
+    ],
     censor: '[REDACTED]'
   }
 });

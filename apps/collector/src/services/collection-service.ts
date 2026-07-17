@@ -1,5 +1,6 @@
 import { collectorConfig } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { sanitizeMysqlError } from '@mysql-monitor/shared';
 import { buildInnoDbSnapshot } from '../metrics/innodb-calculator.js';
 import { buildServerStatusSnapshot } from '../metrics/status-calculator.js';
 import type { MySqlMonitoringAdapter } from '../monitoring/mysql-adapter.js';
@@ -69,7 +70,16 @@ export class CollectionService {
         recordsCollected: 0,
         sanitizedErrorCode: sanitizeError(error)
       });
-      logger.warn({ err: error, serverId: server.id, metricGroup }, 'collector run failed');
+      logger.warn(
+        {
+          mysqlErrorCode: sanitizeError(error),
+          operation: `collector.${metricGroup}`,
+          monitoredServerId: server.id,
+          metricGroup,
+          elapsedMs: Date.now() - startedAt.getTime()
+        },
+        'collector run failed'
+      );
     } finally {
       await this.runs.releaseLock(server.id, metricGroup);
     }
@@ -166,6 +176,12 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 function sanitizeError(error: unknown): string {
+  const mysqlErrorCode = sanitizeMysqlError(error).code;
+
+  if (mysqlErrorCode !== 'UNKNOWN_MYSQL_ERROR') {
+    return mysqlErrorCode.slice(0, 120);
+  }
+
   if (typeof error === 'object' && error !== null && 'code' in error) {
     const code = (error as { code?: unknown }).code;
     return typeof code === 'string' ? code.slice(0, 120) : 'UNKNOWN_COLLECTOR_ERROR';

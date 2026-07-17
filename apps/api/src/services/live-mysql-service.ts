@@ -1,8 +1,14 @@
 import mysql from 'mysql2/promise';
 import type { RowDataPacket } from 'mysql2';
+import {
+  monitoredMysqlConnectionAttempts,
+  sanitizeMysqlError,
+  shouldRetryWithoutSsl
+} from '@mysql-monitor/shared';
 import type { RunningQuerySummary } from '@mysql-monitor/types';
 import { apiConfig } from '../config/env.js';
-import { NotFoundError } from '../errors/app-error.js';
+import { logger } from '../config/logger.js';
+import { MonitoredServerUnavailableError, NotFoundError } from '../errors/app-error.js';
 import type { MonitoredServerRepository } from '../repositories/monitored-server-repository.js';
 import { decryptSecret } from '../utils/crypto.js';
 
@@ -28,13 +34,16 @@ export class LiveMySqlService {
       throw new NotFoundError('Monitored server');
     }
 
-    const connection = await mysql.createConnection({
+    const startedAt = Date.now();
+    const connection = await createMonitoredConnection({
       host: server.host,
       port: server.port,
       user: server.username,
       password: decryptSecret(credential.encryptedPassword, apiConfig.CREDENTIAL_ENCRYPTION_KEY),
-      connectTimeout: 5_000,
-      ssl: server.sslMode === 'disabled' ? undefined : {}
+      sslMode: server.sslMode,
+      operation: 'api.running_queries',
+      monitoredServerId: server.id,
+      startedAt
     });
 
     try {
@@ -60,6 +69,52 @@ export class LiveMySqlService {
       await connection.end();
     }
   }
+}
+
+async function createMonitoredConnection(input: {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  sslMode: 'disabled' | 'preferred' | 'required';
+  operation: string;
+  monitoredServerId: string;
+  startedAt: number;
+}): Promise<mysql.Connection> {
+  const attempts = monitoredMysqlConnectionAttempts(input.sslMode);
+  let lastError: unknown;
+
+  for (const [attemptIndex, attempt] of attempts.entries()) {
+    try {
+      return await mysql.createConnection({
+        host: input.host,
+        port: input.port,
+        user: input.user,
+        password: input.password,
+        connectTimeout: apiConfig.MONITORED_MYSQL_CONNECT_TIMEOUT_MS,
+        ssl: attempt.ssl
+      });
+    } catch (error) {
+      lastError = error;
+
+      if (shouldRetryWithoutSsl(input.sslMode, error, attemptIndex)) {
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  logger.warn(
+    {
+      mysqlErrorCode: sanitizeMysqlError(lastError).code,
+      operation: input.operation,
+      monitoredServerId: input.monitoredServerId,
+      elapsedMs: Date.now() - input.startedAt
+    },
+    'monitored mysql connection failed'
+  );
+  throw new MonitoredServerUnavailableError();
 }
 
 function maskHost(host: string | null): string | null {

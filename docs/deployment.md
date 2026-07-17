@@ -22,6 +22,7 @@ Production requirements:
 - run migrations before application startup
 - configure log shipping and backup policy
 - configure retention settings before high-volume collection
+- tune `MONITORED_MYSQL_CONNECT_TIMEOUT_MS` for monitored MySQL servers on slower networks; production defaults to `15000` ms
 
 Production safety defaults:
 
@@ -30,3 +31,4 @@ Production safety defaults:
 - CloudPanel proxies public HTTPS traffic to loopback ports;
 - React is served by Nginx with an SPA fallback for direct routes like `/servers`;
 - production builds require `VITE_API_BASE_URL`/`PUBLIC_API_BASE_URL` and do not fall back to localhost.
+- monitored MySQL connections use `MONITORED_MYSQL_CONNECT_TIMEOUT_MS`; the application database pool has its own connection behavior and is not changed by this setting.

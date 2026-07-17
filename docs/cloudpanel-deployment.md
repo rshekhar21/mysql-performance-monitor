@@ -35,6 +35,8 @@ Before running the installer, set:
 - `SEED_ADMIN_EMAIL`
 - `SEED_ADMIN_PASSWORD`
 
+`MONITORED_MYSQL_CONNECT_TIMEOUT_MS` controls API and collector connections to monitored MySQL servers. Keep the production default of `15000` ms unless local network conditions require a different value; this does not change the private application database connection.
+
 The installer generates strong values for `APP_DB_PASSWORD`, `APP_DB_ROOT_PASSWORD`, `JWT_SECRET`, and `CREDENTIAL_ENCRYPTION_KEY` if they still contain placeholder values.
 
 The installer is safe to run repeatedly:
